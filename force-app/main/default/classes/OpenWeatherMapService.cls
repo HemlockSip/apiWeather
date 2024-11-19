@@ -3,13 +3,11 @@ public class OpenWeatherMapService {
     private static final String API_KEY = WeatherAPIKey__c.getInstance().Api_Key__c;
     
     public class LocationRequest {
-        // Private backing fields
         private String cityValue;
         private String stateCodeValue;
         private String countryCodeValue;
         private Integer limitValue;
         
-        // City property with validation
         public String city {
             get { return cityValue; }
             set {
@@ -23,7 +21,6 @@ public class OpenWeatherMapService {
             }
         }
         
-        // State code property with validation
         public String stateCode {
             get { return stateCodeValue; }
             set {
@@ -36,7 +33,6 @@ public class OpenWeatherMapService {
             }
         }
         
-        // Country code property with validation
         public String countryCode {
             get { return countryCodeValue; }
             set {
@@ -49,12 +45,11 @@ public class OpenWeatherMapService {
             }
         }
         
-        // Limit property with validation
         public Integer limitInteger {
             get { return limitValue; }
             set {
                 if (value == null) {
-                    limitValue = 5; // Default value
+                    limitValue = 5;
                 } else if (value < 1) {
                     throw new OpenWeatherMapException('Limit must be at least 1');
                 } else if (value > 5) {
@@ -65,31 +60,24 @@ public class OpenWeatherMapService {
             }
         }
         
-        // Constructor with validation
         public LocationRequest(String city, String stateCode, String countryCode, Integer limitInteger) {
-            // These assignments will trigger the validation in the setters
             this.city = city;
             this.stateCode = stateCode;
             this.countryCode = countryCode;
             this.limitInteger = limitInteger;
-            
-            // Additional cross-field validation
             validateLocationCombination();
         }
         
-        // Default constructor
         public LocationRequest() {
-            this.limitInteger = 5; // Set default limit
+            this.limitInteger = 5;
         }
         
-        // Method to validate combination of fields
         private void validateLocationCombination() {
             if (String.isNotBlank(stateCode) && String.isBlank(countryCode)) {
                 throw new OpenWeatherMapException('Country code is required when state code is provided');
             }
         }
         
-        // Method to validate the entire request
         public void validate() {
             if (String.isBlank(city)) {
                 throw new OpenWeatherMapException('City is required');
@@ -98,9 +86,8 @@ public class OpenWeatherMapService {
         }
     }
     
-    public static HttpResponse getGeoLocation(LocationRequest request) {
+    public static LocationResponse getGeoLocation(LocationRequest request) {
         try {
-            // Validate request before proceeding
             request.validate();
             
             Http http = new Http();
@@ -122,16 +109,37 @@ public class OpenWeatherMapService {
             req.setEndpoint(endpoint);
             req.setMethod('GET');
             req.setHeader('Content-Type', 'application/json');
+            req.setTimeout(120000); // 2-minute timeout
             
-            return http.send(req);
-
-            // from here on the request should be handled
-
-
+            HttpResponse response = http.send(req);
+            
+            if (response.getStatusCode() == 200) {
+                List<LocationResponse> locations = (List<LocationResponse>)JSON.deserialize(
+                    response.getBody(), 
+                    List<LocationResponse>.class
+                );
+                
+                if (locations != null && !locations.isEmpty()) {
+                    return locations[0];
+                }
+                throw new OpenWeatherMapException('No location data found for the given criteria');
+            } else {
+                throw new OpenWeatherMapException('API request failed with status code: ' + 
+                    response.getStatusCode() + ' and message: ' + response.getStatus());
+            }
+        } catch (OpenWeatherMapException e) {
+            throw e;
         } catch (Exception e) {
-            System.debug('Error making API call: ' + e.getMessage());
             throw new OpenWeatherMapException('Error making API call: ' + e.getMessage());
         }
+    }
+    
+    public class LocationResponse {
+        public Double lat { get; set; }
+        public Double lon { get; set; }
+        public String name { get; set; }
+        public String country { get; set; }
+        public String state { get; set; }
     }
     
     public class OpenWeatherMapException extends Exception {}
