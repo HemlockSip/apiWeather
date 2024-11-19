@@ -124,6 +124,10 @@ public class OpenWeatherMapService {
             req.setHeader('Content-Type', 'application/json');
             
             return http.send(req);
+
+            // from here on the request should be handled
+
+
         } catch (Exception e) {
             System.debug('Error making API call: ' + e.getMessage());
             throw new OpenWeatherMapException('Error making API call: ' + e.getMessage());
