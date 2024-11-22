@@ -1,6 +1,7 @@
 public with sharing class WeatherDataUtils {
+
     
-    public static void createWeatherData(SObject record) {
+    public static void createWeatherData(List<LocationResponse> record) {
         Weather_Data__c weatherData = new Weather_Data__c();
         
         // Location Fields
