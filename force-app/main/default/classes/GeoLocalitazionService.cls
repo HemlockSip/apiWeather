@@ -6,7 +6,16 @@ public with sharing class GeoLocalitazionService {
     
     private static final String BASE_URL = 'http://api.openweathermap.org/geo/1.0/direct?q=';
     private static final String API_KEY = WeatherAPIKey__c.getInstance().Api_Key__c;
+    private static final String baseUrlWeather = 'https://api.openweathermap.org/data/2.5/weather?';
     
+    public String getApiKey(){
+        return API_KEY;
+    }
+
+    public String getBaseUrl() {
+        return BASE_URL;
+    }
+
     
     public void geoLocalitazionCallout(String cityName, String countryCode, String baseUrl, String apiKey, Id recordId) {
         
@@ -23,7 +32,10 @@ public with sharing class GeoLocalitazionService {
         if (geoResponse.getStatusCode() == 200) {
             String responseBody = geoResponse.getBody();
             
-            Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(geoResponse.getBody());
+            //Map<String, Object> resultMap = (Map<String, Object>)JSON.deserializeUntyped(geoResponse.getBody());
+
+            List<Object> results = (List<Object>)JSON.deserializeUntyped(geoResponse.getBody());
+            Map<String, Object> resultMap = (Map<String, Object>)results[0];
             
             // Extract the latitude and longitude from the response
             Double latitude = (Double)resultMap.get('lat');
@@ -98,5 +110,30 @@ public with sharing class GeoLocalitazionService {
         }
         
     }
-}
 
+
+    public static void getWeather(String latitude, String longitude, String baseUrl, String apiKey){
+        // https://api.openweathermap.org/data/2.5/weather?lat={lat}&lon={lon}&appid={API key}
+
+        Http http = new Http();
+        HttpRequest weatherRequest = new HttpRequest();
+        weatherRequest.setEndpoint(baseUrl + 'lat=' + latitude + '&lon=' + longitude + '&appid=' + apiKey);
+        weatherRequest.setMethod('GET');
+
+        HttpResponse weatherResponse = http.send(weatherRequest);
+
+        if (weatherResponse.getStatusCode() == 200) {
+
+            Map<String, Object> responseMap = (Map<String, Object>)JSON.deserializeUntyped(weatherResponse.getBody());
+            List<Object> weatherList = (List<Object>)responseMap.get('weather');
+            Map<String, Object> weatherData = (Map<String, Object>)weatherList[0];
+
+            String mainWeather = (String)weatherData.get('main');        // "Rain"
+            String description = (String)weatherData.get('description');  // "moderate rain"
+
+        }
+
+
+    }
+
+}
